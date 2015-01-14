@@ -18,9 +18,8 @@ from smtplib import SMTP as SMTP       # this invokes the secure SMTP protocol (
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 
+#tdcpb smtp server
 SMTPserver = '10.10.10.232'
-
-
 
 EXPEDITOR="robot@tdcpb.org"
 RECEIVERS = [
@@ -77,7 +76,6 @@ def smtpSendMail(p_msg):
     conn.set_debuglevel(False)
     #conn.login(USERNAME, PASSWORD)
     try:
-        #print p_msg.as_string()
         conn.sendmail(p_msg['From'], p_msg['To'], p_msg.as_string())
     finally:
         conn.close()
@@ -102,47 +100,9 @@ def get_tinc_ip():
 def get_hostname():
     return socket.gethostname()
 def main(argv):
-    parser = argparse.ArgumentParser(description='Torrent done script')
-    parser.add_argument('torrent_name',
-                metavar='TORRENT_NAME',
-                type = str,
-                nargs = "?",
-                help = 'Torrent name' )
-    parser.add_argument('torrent_time',
-                metavar='TORRENT_TIME',
-                type = str,
-                nargs = "?",
-                help = 'Torrent name' )
-    parser.add_argument('torrent_dir',
-                metavar='TORRENT_DIR',
-                type = str,
-                nargs = "?",
-                help = 'Torrent dir' )
-    parser.add_argument('torrent_hash',
-                metavar='TORRENT_HASH',
-                type = str,
-                nargs = "?",
-                help = 'Torrent hash' )
-    parser.add_argument('torrent_id',
-                metavar='TORRENT_ID',
-                type = str,
-                nargs = "?",
-                help = 'Torrent id' )
+    logging.basicConfig(format = '%(asctime)s %(levelname)s %(message)s # %(filename)s %(funcName)s l %(lineno)d', level=logging.ERROR)
 
-
-
-
-    parser.add_argument('-d', '--debug', dest='debug', action='store_const',
-                   const=logging.DEBUG, default=logging.INFO,
-                   help='debug mode')
-
-    args = parser.parse_args()
-
-    logging.basicConfig(format = '%(asctime)s %(levelname)s %(message)s # %(filename)s %(funcName)s l %(lineno)d', level=args.debug)
-
-    body = "Bonjour \n Ligne 2 \n Ligne 3"
     torrent_msg ={}
-
     torrent_msg["name"] = os.environ.get('TR_TORRENT_NAME',  "ERROR_NO_NAME")
     torrent_msg["time"] = os.environ.get('TR_TIME_LOCALTIME',"ERROR_NO_TIME")
     torrent_msg["dir"]  = os.environ.get('TR_TORRENT_DIR',   "ERROR_NO_DIR")
@@ -161,7 +121,6 @@ def main(argv):
 
     #mycontent.append("Date de Generation: %s\n"%(time.strftime("%c")))
     WriteFile("/tmp/tdcpb-{}.log".format(torrent_msg["name"]), mycontent)
-    
     sendMail(EXPEDITOR, RECEIVERS, torrent_msg)
 
 
