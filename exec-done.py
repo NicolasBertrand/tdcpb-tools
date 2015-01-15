@@ -55,10 +55,13 @@ def sendMail(p_torrent_msg, p_config_data) :
     msg['tdcpb-host'] = p_torrent_msg["hostname"]
     msg['tdcpb-ip'] = p_torrent_msg["ip"]
     msg.attach(MIMEText(_body, 'plain'))
-
+    print p_config_data["receivers"]
     for _receiver in p_config_data["receivers"]:
-        logging.info("Sending mail to %s"%(_receiver))
-        msg['To'] = _receiver
+        if msg.has_key('To'):
+            msg.replace_header('To',_receiver)
+        else:
+            msg['To'] = _receiver
+        logging.info("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
