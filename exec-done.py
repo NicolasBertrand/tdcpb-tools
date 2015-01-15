@@ -17,17 +17,9 @@ import shutil
 from smtplib import SMTP as SMTP       # this invokes the secure SMTP protocol (port 465, uses SSL)
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
+import json
 
-#tdcpb smtp server
-SMTPserver = '10.10.10.232'
-
-EXPEDITOR="robot@tdcpb.org"
-RECEIVERS = [
-    "lutins@tdcpb.org",
-#    "tournefeuille@cinemas-utopia.org",
-]
-
-def sendMail(p_from, p_tos, p_torrent_msg) :
+def sendMail(p_torrent_msg, p_config_data) :
     _subject = "Reception de {} sur {}".format(p_torrent_msg["name"], p_torrent_msg["hostname"])
     _body =  ""
     _str = "Bonjour\n"
@@ -54,7 +46,7 @@ def sendMail(p_from, p_tos, p_torrent_msg) :
 
     msg = MIMEMultipart()
     msg['Subject'] = _subject
-    msg['From'] = p_from
+    msg['From'] = p_config_data["expeditor"]
 
     msg['tdcpb-name'] = p_torrent_msg["name"]
     msg['tdcpb-reception'] = p_torrent_msg["time"]
@@ -64,18 +56,19 @@ def sendMail(p_from, p_tos, p_torrent_msg) :
     msg['tdcpb-ip'] = p_torrent_msg["ip"]
     msg.attach(MIMEText(_body, 'plain'))
 
-    for _receiver in p_tos:
+    for _receiver in p_config_data["receivers"]:
         logging.info("Sending mail to %s"%(_receiver))
         msg['To'] = _receiver
-        smtpSendMail(msg)
+        smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
-def smtpSendMail(p_msg):
+def smtpSendMail(p_msg, p_config_data):
 
-    conn = SMTP(SMTPserver)
+    conn = SMTP(p_config_data["smtp"])
     conn.set_debuglevel(False)
     #conn.login(USERNAME, PASSWORD)
     try:
+        #print p_msg.as_string()
         conn.sendmail(p_msg['From'], p_msg['To'], p_msg.as_string())
     finally:
         conn.close()
@@ -99,7 +92,15 @@ def get_tinc_ip():
 
 def get_hostname():
     return socket.gethostname()
+
+def parseConfig(p_config_file):
+    json_data=open(p_config_file)
+    data = json.load(json_data)
+    json_data.close()
+    return data
+
 def main(argv):
+    config_data = parseConfig("./exec-done.json")
     logging.basicConfig(format = '%(asctime)s %(levelname)s %(message)s # %(filename)s %(funcName)s l %(lineno)d', level=logging.ERROR)
 
     torrent_msg ={}
@@ -121,7 +122,7 @@ def main(argv):
 
     #mycontent.append("Date de Generation: %s\n"%(time.strftime("%c")))
     WriteFile("/tmp/tdcpb-{}.log".format(torrent_msg["name"]), mycontent)
-    sendMail(EXPEDITOR, RECEIVERS, torrent_msg)
+    sendMail(torrent_msg, config_data)
 
 
 if __name__ == "__main__":

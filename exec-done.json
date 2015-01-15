@@ -1,0 +1,5 @@
+{
+"smtp":"10.10.10.232",
+"expeditor":"robots@tdcpb.org",
+"receivers":["lutins@tdcpb.org", "nico@isf.cc"]
+}
