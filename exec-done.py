@@ -19,6 +19,8 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 import json
 
+CONFIG_FILE="/etc/transmission-daemon/exec-done.json"
+
 def sendMail(p_torrent_msg, p_config_data) :
     _subject = "Reception de {} sur {}".format(p_torrent_msg["name"], p_torrent_msg["hostname"])
     _body =  ""
@@ -102,7 +104,7 @@ def parseConfig(p_config_file):
     return data
 
 def main(argv):
-    config_data = parseConfig("./exec-done.json")
+    config_data = parseConfig(CONFIG_FILE)
     logging.basicConfig(format = '%(asctime)s %(levelname)s %(message)s # %(filename)s %(funcName)s l %(lineno)d', level=logging.ERROR)
 
     torrent_msg ={}
