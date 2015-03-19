@@ -5,5 +5,6 @@
 "ftp-library" : false,
 "ftp-user" : "user",
 "ftp-pass" : "pass",
-"ftp-host" : "XXXXX"
+"ftp-host" : "XXXXX",
+"ftp-remote-path" : "/"
 }
