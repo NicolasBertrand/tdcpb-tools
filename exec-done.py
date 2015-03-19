@@ -11,6 +11,7 @@ import logging
 import sys
 import commands
 import socket
+import string
 
 import shutil
 
@@ -53,6 +54,7 @@ class Lftp(object):
             self.run_lftp()
         except TdcpbException as _err:
             logging.error("Copy of {} FAILED".format(os.path.basename(self.dir_path)))
+            raise TdcpbException
         else:
             logging.info("Copy of {} successfull".format(os.path.basename(self.dir_path)))
 
@@ -67,33 +69,75 @@ class Lftp(object):
             raise TdcpbException(_msg)
 
 
+TPL_RECEPTION_OK = \
+"""
+Bonjour,
+
+Vous avez reçu le DCP suivant:
+DCP:                     $name
+Date de Reception:       $time
+Repertoire de reception: $dir
+Machine:                 $hostname ($ip)
+
+Cordialement
+The DCP Bay
+"""
+
+TPL_RECEPTION_OK_FTP = \
+"""
+Bonjour,
+
+Vous avez reçu le DCP suivant:
+DCP:                     $name
+Date de Reception:       $time
+Repertoire de reception: $dir
+Machine:                 $hostname ($ip)
+
+RMQ: Le transfert du DCP vers la librairie est en cours.
+
+Cordialement
+The DCP Bay
+"""
+
+TPL_FTP_OK = \
+"""
+Bonjour
+LE DCP $name à été transféré sur la librairie
+
+Cordialement
+The DCP Bay
+"""
+
+TPL_FTP_KO = \
+"""
+Bonjour
+L transfert du DCP $name à échoué.
+
+Vous pouvez nous joindre à contacter@tdcpb.org pour vous aider
+à resoudre le problème
+
+Cordialement
+The DCP Bay
+"""
 
 
-def sendMail(p_torrent_msg, p_config_data) :
-    _subject = "Reception de {} sur {}".format(p_torrent_msg["name"], p_torrent_msg["hostname"])
-    _body =  ""
-    _str = "Bonjour\n"
-    _body += _str
-    _str = "Vous avez recu le DCP suivant:\n"
-    _body += _str
-    _str = "DCP               : {}\n".format(p_torrent_msg["name"])
-    _body += _str
-    _str = "Date de Reception : {}\n".format(p_torrent_msg["time"])
-    _body += _str
-    _str = "DCP repertoire    : {}\n".format(p_torrent_msg["dir"])
-    _body += _str
-    _str = "Torrent hash      : {}\n".format(p_torrent_msg["hash"])
-    _body += _str
-    _str = "Machine           : {}({})\n".format(p_torrent_msg["hostname"],p_torrent_msg["ip"])
-    _body += _str
 
-    _str = "\n"
-    _body += _str
-    _str = "Cordialement\n"
-    _body += _str
-    _str = "The DCP Bay\n"
-    _body += _str
+def sendMailReceptionOk(p_torrent_msg, p_config_data) :
+    _subject = "[INDE-CP] Reception de {} sur {}".format(p_torrent_msg["name"], p_torrent_msg["hostname"])
+    if p_config_data['ftp-library']:
+        _tpl = string.Template(TPL_RECEPTION_OK_FTP)
+    else :
+        _tpl = string.Template(TPL_RECEPTION_OK)
 
+    _tpl_values = {
+        'name'      : p_torrent_msg["name"],
+        'time'      : p_torrent_msg["time"],
+        'dir'       : p_torrent_msg["dir"],
+        'hostname'  : p_torrent_msg["hostname"],
+        'ip'        : p_torrent_msg["ip"],
+        }
+
+    _body = _tpl.substitute(_tpl_values)
     msg = MIMEMultipart()
     msg['Subject'] = _subject
     msg['From'] = p_config_data["expeditor"]
@@ -104,7 +148,7 @@ def sendMail(p_torrent_msg, p_config_data) :
     msg['tdcpb-hash'] = p_torrent_msg["hash"]
     msg['tdcpb-host'] = p_torrent_msg["hostname"]
     msg['tdcpb-ip'] = p_torrent_msg["ip"]
-    msg.attach(MIMEText(_body, 'plain'))
+    msg.attach(MIMEText(_body, 'plain', "utf8"))
     for _receiver in p_config_data["receivers"]:
         if msg.has_key('To'):
             msg.replace_header('To',_receiver)
@@ -113,6 +157,64 @@ def sendMail(p_torrent_msg, p_config_data) :
         logging.info("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
+
+def sendMailFtpOk(p_torrent_msg, p_config_data) :
+    _subject = "[INDE-CP] Transfert de {} sur la librairie finis".format(p_torrent_msg["name"])
+    _tpl = string.Template(TPL_FTP_OK)
+    _tpl_values = {
+        'name'      : p_torrent_msg["name"],
+        }
+    _body = _tpl.substitute(_tpl_values)
+    msg = MIMEMultipart()
+    msg['Subject'] = _subject
+    msg['From'] = p_config_data["expeditor"]
+
+    msg['tdcpb-name'] = p_torrent_msg["name"]
+    msg['tdcpb-reception'] = p_torrent_msg["time"]
+    msg['tdcpb-reception-dir'] = p_torrent_msg["dir"]
+    msg['tdcpb-hash'] = p_torrent_msg["hash"]
+    msg['tdcpb-host'] = p_torrent_msg["hostname"]
+    msg['tdcpb-ip'] = p_torrent_msg["ip"]
+    msg['ftp-status'] = "OK"
+    msg.attach(MIMEText(_body, 'plain', 'utf-8'))
+    for _receiver in p_config_data["receivers"]:
+        if msg.has_key('To'):
+            msg.replace_header('To',_receiver)
+        else:
+            msg['To'] = _receiver
+        logging.info("Sending mail to %s"%(msg['To']))
+        smtpSendMail(msg, p_config_data)
+        time.sleep(0.5)
+
+def sendMailFtpKo(p_torrent_msg, p_config_data) :
+    _subject = "[INDE-CP][ERREUR] Transfert de {} sur la librairie ".format(p_torrent_msg["name"])
+    _tpl = string.Template(TPL_FTP_KO)
+    _tpl_values = {
+        'name'      : p_torrent_msg["name"],
+        }
+    _body = _tpl.substitute(_tpl_values)
+    msg = MIMEMultipart()
+    msg['Subject'] = _subject
+    msg['From'] = p_config_data["expeditor"]
+
+    msg['tdcpb-name'] = p_torrent_msg["name"]
+    msg['tdcpb-reception'] = p_torrent_msg["time"]
+    msg['tdcpb-reception-dir'] = p_torrent_msg["dir"]
+    msg['tdcpb-hash'] = p_torrent_msg["hash"]
+    msg['tdcpb-host'] = p_torrent_msg["hostname"]
+    msg['tdcpb-ip'] = p_torrent_msg["ip"]
+    msg['ftp-status'] = "KO"
+    msg.attach(MIMEText(_body, 'plain', 'utf-8'))
+    for _receiver in p_config_data["receivers"]:
+        if msg.has_key('To'):
+            msg.replace_header('To',_receiver)
+        else:
+            msg['To'] = _receiver
+        logging.info("Sending mail to %s"%(msg['To']))
+        smtpSendMail(msg, p_config_data)
+        time.sleep(0.5)
+
+
 
 def smtpSendMail(p_msg, p_config_data):
 
@@ -174,13 +276,21 @@ def main(argv):
 
     #mycontent.append("Date de Generation: %s\n"%(time.strftime("%c")))
     WriteFile("/tmp/tdcpb-{}.log".format(torrent_msg["name"]), mycontent)
+    sendMailReceptionOk(torrent_msg, config_data)
     if config_data['ftp-library'] :
         print "FTP vers la librairie"
         _dir_path = os.path.join(torrent_msg["dir"],torrent_msg["name"])
         ftp = Lftp(_dir_path, config_data)
-        ftp.mirror()
-    sendMail(torrent_msg, config_data)
-
+        try:
+            ftp.mirror()
+        except:
+            #smoething goes wrong in copy
+            logging.Error("FTP transfer FAIL")
+            sendMailFtpKo(torrent_msg, config_data)
+        else:
+            # send mail copy to library ok
+            sendMailFtpOk(torrent_msg, config_data)
+            logging.info("FTP transfer OK")
 
 if __name__ == "__main__":
    sys.exit(main(sys.argv))
