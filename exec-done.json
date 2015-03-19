@@ -1,5 +1,9 @@
 {
 "smtp":"10.10.10.232",
 "expeditor":"robots@tdcpb.org",
-"receivers":["lutins@tdcpb.org", "nico@isf.cc"]
+"receivers":["lutins@tdcpb.org", "nico@isf.cc"],
+"ftp-library" : true,
+"ftp-user" : "utopia31",
+"ftp-pass" : "latin31000",
+"ftp-host" : "10.10.10.31"
 }
