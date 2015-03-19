@@ -21,8 +21,8 @@ from email.MIMEText import MIMEText
 import subprocess as SP
 import json
 
-#CONFIG_FILE="/etc/transmission-daemon/exec-done.json"
-CONFIG_FILE="./exec-done.json"
+CONFIG_FILE="/etc/transmission-daemon/exec-done.json"
+#CONFIG_FILE="./exec-done.json"
 
 class TdcpbException(Exception):
     def __init__(self, message, errors = None):
