@@ -22,21 +22,20 @@ import subprocess as SP
 import json
 
 CONFIG_FILE="/etc/transmission-daemon/exec-done.json"
-#CONFIG_FILE="./exec-done.json"
 
 class TdcpbException(Exception):
     def __init__(self, message, errors = None):
         Exception.__init__(self, message)
 
 class Lftp(object):
-    LFTP_CMDS="set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true; mirror --verbose=3 -R {} ; quit"
+    LFTP_CMDS="set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true; mirror --verbose=3 -R {} {} ; quit"
 
     def __init__(self, p_dir_path, p_config_data) :
         self.config_data = p_config_data
         # TODO verfiy p_dir_path
         self.dir_path = p_dir_path
 
-        lftp_cmd = self.LFTP_CMDS.format( self.dir_path )
+        lftp_cmd = self.LFTP_CMDS.format( self.dir_path , self.config_data['ftp-remote-path'])
         _ftp_connect="ftp://{}:{}@{}".format(self.config_data['ftp-user'],
                                              self.config_data['ftp-pass'],
                                              self.config_data['ftp-host'])
@@ -285,7 +284,7 @@ def main(argv):
             ftp.mirror()
         except:
             #smoething goes wrong in copy
-            logging.Error("FTP transfer FAIL")
+            logging.error("FTP transfer FAIL")
             sendMailFtpKo(torrent_msg, config_data)
         else:
             # send mail copy to library ok
