@@ -20,6 +20,20 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 import subprocess as SP
 import json
+from logging.handlers import SysLogHandler
+
+logger = logging.getLogger('TdcpbLogger')
+logger.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(levelname)s %(message)s # %(filename)s %(funcName)s l %(lineno)d')
+
+syslog_handler = SysLogHandler(address="/dev/log")
+syslog_handler.setFormatter(formatter)
+
+logger.addHandler(syslog_handler)
+
+logger.debug('This is a debug')
 
 CONFIG_FILE="/etc/transmission-daemon/exec-done.json"
 
@@ -40,13 +54,13 @@ class Lftp(object):
         else:
             lftp_tpl = self.LFTP_CMDS
         if self.config_data['ftp-remote-path'] is None:
-            logging.error('No remote path specified')
+            logger.error('No remote path specified')
             sys.exit(1)
         if self.config_data['ftp-remote-path'] == "/":
             lftp_cmd = lftp_tpl.format( self.dir_path , '')
         else:
             if not (self.config_data['ftp-remote-path']).endswith("/"):
-                logging.error("ftp-remote-path({}) shall ends with /, please verify".format(self.config_data['ftp-remote-path']))
+                logger.error("ftp-remote-path({}) shall ends with /, please verify".format(self.config_data['ftp-remote-path']))
                 sys.exit(1)
             lftp_cmd = lftp_tpl.format( self.dir_path , self.config_data['ftp-remote-path'])
         _ftp_connect="ftp://{}:{}@{}".format(self.config_data['ftp-user'],
@@ -57,27 +71,27 @@ class Lftp(object):
             "-e",
             lftp_cmd
             ]
-        logging.debug("Cmd: {}".format(" ".join(self.cmd)))
+        logger.debug("Cmd: {}".format(" ".join(self.cmd)))
 
 
     def mirror(self):
-        logging.info("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
+        logger.info("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
         try :
             self.run_lftp()
         except TdcpbException as _err:
-            logging.error("Copy of {} FAILED".format(os.path.basename(self.dir_path)))
+            logger.error("Copy of {} FAILED".format(os.path.basename(self.dir_path)))
             raise TdcpbException
         else:
-            logging.info("Copy of {} successfull".format(os.path.basename(self.dir_path)))
+            logger.info("Copy of {} successfull".format(os.path.basename(self.dir_path)))
 
     def run_lftp(self):
         sync = SP.Popen(self.cmd, stdout=SP.PIPE, stderr= SP.PIPE)
         (stdout, stderr) = sync.communicate()
-        logging.debug( stdout)
+        logger.debug( stdout)
         if sync.returncode:
             _msg = "FTP command failed"
-            logging.error(_msg)
-            logging.error(stderr)
+            logger.error(_msg)
+            logger.error(stderr)
             raise TdcpbException(_msg)
 
 
@@ -166,7 +180,7 @@ def sendMailReceptionOk(p_torrent_msg, p_config_data) :
             msg.replace_header('To',_receiver)
         else:
             msg['To'] = _receiver
-        logging.info("Sending mail to %s"%(msg['To']))
+        logger.info("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
@@ -194,7 +208,7 @@ def sendMailFtpOk(p_torrent_msg, p_config_data) :
             msg.replace_header('To',_receiver)
         else:
             msg['To'] = _receiver
-        logging.info("Sending mail to %s"%(msg['To']))
+        logger.info("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
@@ -222,7 +236,7 @@ def sendMailFtpKo(p_torrent_msg, p_config_data) :
             msg.replace_header('To',_receiver)
         else:
             msg['To'] = _receiver
-        logging.info("Sending mail to %s"%(msg['To']))
+        logger.info("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
@@ -247,7 +261,7 @@ def WriteFile(p_path, p_contents):
         finally:
             f.close()
     except IOError, e:
-        logging.error(e)
+        logger.error(e)
 
 def get_tinc_ip():
     _ips = commands.getoutput("hostname -I").split()
@@ -267,8 +281,6 @@ def parseConfig(p_config_file):
 
 def main(argv):
     config_data = parseConfig(CONFIG_FILE)
-    logging.basicConfig(format = '%(asctime)s %(levelname)s %(message)s # %(filename)s %(funcName)s l %(lineno)d', level=logging.DEBUG)
-
     torrent_msg ={}
     torrent_msg["name"]     = os.environ.get('TR_TORRENT_NAME',  "ERROR_NO_NAME")
     torrent_msg["time"]     = os.environ.get('TR_TIME_LOCALTIME',"ERROR_NO_TIME")
@@ -297,12 +309,12 @@ def main(argv):
             ftp.mirror()
         except:
             #smoething goes wrong in copy
-            logging.error("FTP transfer FAIL")
+            logger.error("FTP transfer FAIL")
             sendMailFtpKo(torrent_msg, config_data)
         else:
             # send mail copy to library ok
             sendMailFtpOk(torrent_msg, config_data)
-            logging.info("FTP transfer OK")
+            logger.info("FTP transfer OK")
 
 if __name__ == "__main__":
    sys.exit(main(sys.argv))
