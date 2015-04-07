@@ -28,14 +28,27 @@ class TdcpbException(Exception):
         Exception.__init__(self, message)
 
 class Lftp(object):
-    LFTP_CMDS="set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true; mirror --verbose=3 -R {} {} ; quit"
+    LFTP_CMDS="set xfer:log true; mirror --verbose=3 -Rc {} {} ; quit"
+    LFTP_SSL_CMDS="set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true; mirror --verbose=3 -Rc {} {} ; quit"
 
     def __init__(self, p_dir_path, p_config_data) :
         self.config_data = p_config_data
         # TODO verfiy p_dir_path
         self.dir_path = p_dir_path
-
-        lftp_cmd = self.LFTP_CMDS.format( self.dir_path , self.config_data['ftp-remote-path'])
+        if self.config_data['ftp-ssl']:
+            lftp_tpl = self.LFTP_SSL_CMDS
+        else:
+            lftp_tpl = self.LFTP_CMDS
+        if self.config_data['ftp-remote-path'] is None:
+            logging.error('No remote path specified')
+            sys.exit(1)
+        if self.config_data['ftp-remote-path'] == "/":
+            lftp_cmd = lftp_tpl.format( self.dir_path , '')
+        else:
+            if not (self.config_data['ftp-remote-path']).endswith("/"):
+                logging.error("ftp-remote-path({}) shall ends with /, please verify".format(self.config_data['ftp-remote-path']))
+                sys.exit(1)
+            lftp_cmd = lftp_tpl.format( self.dir_path , self.config_data['ftp-remote-path'])
         _ftp_connect="ftp://{}:{}@{}".format(self.config_data['ftp-user'],
                                              self.config_data['ftp-pass'],
                                              self.config_data['ftp-host'])
