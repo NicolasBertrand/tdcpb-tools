@@ -30,8 +30,14 @@ formatter = logging.Formatter('%(levelname)s %(message)s # %(filename)s %(funcNa
 
 syslog_handler = SysLogHandler(address="/dev/log")
 syslog_handler.setFormatter(formatter)
+syslog_handler.setLevel(logging.INFO)
+
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+ch.setLevel(logging.DEBUG)
 
 logger.addHandler(syslog_handler)
+logger.addHandler(ch)
 
 logger.debug('This is a debug')
 
@@ -75,7 +81,7 @@ class Lftp(object):
 
 
     def mirror(self):
-        logger.info("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
+        logger.debug("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
         try :
             self.run_lftp()
         except TdcpbException as _err:
@@ -180,7 +186,7 @@ def sendMailReceptionOk(p_torrent_msg, p_config_data) :
             msg.replace_header('To',_receiver)
         else:
             msg['To'] = _receiver
-        logger.info("Sending mail to %s"%(msg['To']))
+        logger.debug("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
@@ -208,7 +214,7 @@ def sendMailFtpOk(p_torrent_msg, p_config_data) :
             msg.replace_header('To',_receiver)
         else:
             msg['To'] = _receiver
-        logger.info("Sending mail to %s"%(msg['To']))
+        logger.debug("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
@@ -236,7 +242,7 @@ def sendMailFtpKo(p_torrent_msg, p_config_data) :
             msg.replace_header('To',_receiver)
         else:
             msg['To'] = _receiver
-        logger.info("Sending mail to %s"%(msg['To']))
+        logger.debug("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
 
