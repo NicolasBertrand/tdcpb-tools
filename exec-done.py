@@ -91,7 +91,7 @@ class Lftp(object):
             logger.info("Copy of {} successfull".format(os.path.basename(self.dir_path)))
 
     def run_lftp(self):
-        sync = SP.Popen(self.cmd, stdout=SP.PIPE, stderr= SP.PIPE)
+        sync = SP.Popen(self.cmd, stdout = SP.PIPE, stderr = SP.PIPE)
         (stdout, stderr) = sync.communicate()
         logger.debug( stdout)
         if sync.returncode:
@@ -285,6 +285,25 @@ def parseConfig(p_config_file):
     json_data.close()
     return data
 
+def run_seed(torrent_name, config):
+    cmd = ["/usr/bin/transmission-remote",
+            config['run-seed-server'],
+            "-n",
+            config['run-seed-login'],
+            "-a",
+            os.path.join(config['torrents-path'], "{}.torrent".format(torrent_name)),
+            ]
+    logger.debug("Cmd: {}".format(" ".join(cmd)))
+
+    sync = SP.Popen(cmd, stdout=SP.PIPE, stderr= SP.PIPE)
+    (stdout, stderr) = sync.communicate()
+    logger.debug(stdout)
+    if sync.returncode:
+        _msg = "start seed failed"
+        logger.error(_msg)
+        raise TdcpbException(_msg)
+
+
 def main(argv):
     config_data = parseConfig(CONFIG_FILE)
     torrent_msg ={}
@@ -307,7 +326,12 @@ def main(argv):
     #mycontent.append("Date de Generation: %s\n"%(time.strftime("%c")))
     WriteFile("/tmp/tdcpb-{}.log".format(torrent_msg["name"]), mycontent)
     sendMailReceptionOk(torrent_msg, config_data)
-    if config_data['ftp-library'] :
+    if 'run-seed' in config_data and config_data['run-seed'] == True :
+        try:
+            run_seed(torrent_msg["name"], config_data)
+        except TdcpbException as _err:
+            logger.error(_err)
+    if 'ftp-library' in config_data and config_data['ftp-library'] == True :
         print "FTP vers la librairie"
         _dir_path = os.path.join(torrent_msg["dir"],torrent_msg["name"])
         ftp = Lftp(_dir_path, config_data)
