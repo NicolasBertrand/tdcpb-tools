@@ -1,0 +1,11 @@
+exec-done.py
+
+1. install
+copy exec-done.py and exec-done.json to /etc/transmission-daemon
+
+2. logging 
+Create log dir
+mkdir /var/log/tdcpb
+chown debian-transmission /var/log/tdcpb
+
+
