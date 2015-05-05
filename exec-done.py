@@ -55,7 +55,7 @@ class Lftp(object):
         self.config_data = p_config_data
         # TODO verfiy p_dir_path
         self.dir_path = p_dir_path
-        if self.config_data['ftp-ssl']:
+        if 'ftp-ssl' in self.config_data and self.config_data['ftp-ssl'] == True:
             lftp_tpl = self.LFTP_SSL_CMDS
         else:
             lftp_tpl = self.LFTP_CMDS
