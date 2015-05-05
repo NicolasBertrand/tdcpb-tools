@@ -157,7 +157,7 @@ The DCP Bay
 
 def sendMailReceptionOk(p_torrent_msg, p_config_data) :
     _subject = "[INDE-CP] Reception de {} sur {}".format(p_torrent_msg["name"], p_torrent_msg["hostname"])
-    if p_config_data['ftp-library']:
+    if 'ftp-library' in p_config_data and p_config_data['ftp-library'] == True:
         _tpl = string.Template(TPL_RECEPTION_OK_FTP)
     else :
         _tpl = string.Template(TPL_RECEPTION_OK)
