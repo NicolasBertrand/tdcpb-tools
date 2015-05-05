@@ -20,26 +20,27 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 import subprocess as SP
 import json
-from logging.handlers import SysLogHandler
+from logging.handlers import TimedRotatingFileHandler
 
 logger = logging.getLogger('TdcpbLogger')
 logger.setLevel(logging.DEBUG)
 
 # create formatter
-formatter = logging.Formatter('%(levelname)s %(message)s # %(filename)s %(funcName)s l %(lineno)d')
+formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s # %(filename)s %(funcName)s l %(lineno)d')
 
-syslog_handler = SysLogHandler(address="/dev/log")
-syslog_handler.setFormatter(formatter)
-syslog_handler.setLevel(logging.INFO)
+file_handler = TimedRotatingFileHandler('/var/log/tdcpb/tdcpb.log', when='D')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
+
 
 ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 ch.setLevel(logging.DEBUG)
 
-logger.addHandler(syslog_handler)
+logger.addHandler(file_handler)
 logger.addHandler(ch)
 
-logger.debug('This is a debug')
+logger.info('Running exec-done.py')
 
 CONFIG_FILE="/etc/transmission-daemon/exec-done.json"
 
