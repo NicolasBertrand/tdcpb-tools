@@ -60,26 +60,30 @@ class Lftp(object):
             lftp_tpl = self.LFTP_SSL_CMDS
         else:
             lftp_tpl = self.LFTP_CMDS
-        if self.config_data['ftp-remote-path'] is None:
-            logger.error('No remote path specified')
-            sys.exit(1)
-        if self.config_data['ftp-remote-path'] == "/":
-            lftp_cmd = lftp_tpl.format( self.dir_path , '')
-        else:
-            if not (self.config_data['ftp-remote-path']).endswith("/"):
-                logger.error("ftp-remote-path({}) shall ends with /, please verify".format(self.config_data['ftp-remote-path']))
+        try:
+            if self.config_data['ftp-remote-path'] is None:
+                logger.error('No remote path specified')
                 sys.exit(1)
-            lftp_cmd = lftp_tpl.format( self.dir_path , self.config_data['ftp-remote-path'])
-        _ftp_connect="ftp://{}:{}@{}".format(self.config_data['ftp-user'],
-                                             self.config_data['ftp-pass'],
-                                             self.config_data['ftp-host'])
-        self.cmd = ["lftp",
-            _ftp_connect,
-            "-e",
-            lftp_cmd
-            ]
-        logger.debug("Cmd: {}".format(" ".join(self.cmd)))
-
+            if self.config_data['ftp-remote-path'] == "/":
+                lftp_cmd = lftp_tpl.format( self.dir_path , '')
+            else:
+                if not (self.config_data['ftp-remote-path']).endswith("/"):
+                    logger.error("ftp-remote-path({}) shall ends with /, please verify".format(self.config_data['ftp-remote-path']))
+                    sys.exit(1)
+                lftp_cmd = lftp_tpl.format( self.dir_path , self.config_data['ftp-remote-path'])
+            _ftp_connect="ftp://{}:{}@{}".format(self.config_data['ftp-user'],
+                                                 self.config_data['ftp-pass'],
+                                                 self.config_data['ftp-host'])
+            self.cmd = ["lftp",
+                _ftp_connect,
+                "-e",
+                lftp_cmd
+                ]
+            logger.debug("Cmd: {}".format(" ".join(self.cmd)))
+        except KeyError as err:
+            msg = "KEY ERROR for {}".format(err)
+            logger.error(msg)
+            raise TdcpbException(msg)
 
     def mirror(self):
         logger.debug("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
@@ -307,7 +311,14 @@ def run_seed(torrent_name, config):
 
 
 def main(argv):
-    config_data = parseConfig(CONFIG_FILE)
+    try :
+        config_data = parseConfig(CONFIG_FILE)
+    except ValueError as err: 
+        msg = "JSON parse ERROR {}".format(err)
+        logger.error(msg)
+        return
+
+
     torrent_msg ={}
     torrent_msg["name"]     = os.environ.get('TR_TORRENT_NAME',  "ERROR_NO_NAME")
     torrent_msg["time"]     = os.environ.get('TR_TIME_LOCALTIME',"ERROR_NO_TIME")
@@ -337,8 +348,9 @@ def main(argv):
     if 'ftp-library' in config_data and config_data['ftp-library'] == True :
         print "FTP vers la librairie"
         _dir_path = os.path.join(torrent_msg["dir"],torrent_msg["name"])
-        ftp = Lftp(_dir_path, config_data)
         try:
+
+            ftp = Lftp(_dir_path, config_data)
             ftp.mirror()
         except:
             #smoething goes wrong in copy
