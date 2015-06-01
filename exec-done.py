@@ -287,6 +287,7 @@ def parseConfig(p_config_file):
     return data
 
 def run_seed(torrent_name, config):
+    logger.debug('Run seed')
     cmd = ["/usr/bin/transmission-remote",
             config['run-seed-server'],
             "-n",
@@ -327,6 +328,7 @@ def main(argv):
     #mycontent.append("Date de Generation: %s\n"%(time.strftime("%c")))
     WriteFile("/tmp/tdcpb-{}.log".format(torrent_msg["name"]), mycontent)
     sendMailReceptionOk(torrent_msg, config_data)
+    logger.debug('Run main')
     if 'run-seed' in config_data and config_data['run-seed'] == True :
         try:
             run_seed(torrent_msg["name"], config_data)
