@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# -*- Mode: Python -*-
+# vim:si:ai:et:sw=4:sts=4:ts=4
+#
+#
+# Copyright Nicolas Bertrand (nico@isf.cc), 2014
+#
+# This file is part of DcpIngest.
+#
+#    DcpIngest is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    DcpIngest is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with DcpIngest.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# Usage:
+# DcpCheckHash.py /path/to/DCP
+#
+# The script verify the hash of each file in the DCP
+
+import sys
+import logging
+import argparse
+import os.path
+
+
+import tdcpblib.di_parser as T_PARSER
+from tdcpblib.common import TdcpbException
+
+def tdcpb_check_hash(p_dcp_folder):
+    logging.info('Hash Check started for {}'\
+        .format(os.path.basename(p_dcp_folder)))
+    # do some basic check
+    if not os.path.exists(p_dcp_folder):
+        _msg = "dcp directory {} does not exist"\
+            .format(p_dcp_folder)
+        raise TdcpbException(_msg)
+
+    _dcp_folder = os.path.abspath(p_dcp_folder)
+    try :
+        DCP = T_PARSER.DiParser(_dcp_folder)
+        _res = DCP.check_hash()
+    except T_PARSER. DiError as _err:
+        raise TdcpbException(_err)
+    if _res is not 'OK':
+        _err = "DCP hash verfication failed"
+        raise TdcpbException(_err)
+    logging.info("Hash OK for {}". \
+            format(os.path.basename(p_dcp_folder)))
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(description='DCP intgrity(hash) verification')
+    parser.add_argument('dcp_path',
+                metavar='DCP_PATH',
+                type = str,
+                nargs = "?",
+                help = 'DCP path' )
+    parser.add_argument('-d', '--debug', dest='debug', action='store_const',
+                   const=logging.DEBUG, default=logging.INFO,
+                   help='debug mode')
+
+    args = parser.parse_args()
+    logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(message)s - %(filename)s %(funcName)s line %(lineno)d thread %(thread)d/%(threadName)s',
+                         level=args.debug)
+    if not args.dcp_path:
+        logging.error("No DCP source")
+        return 1
+    try:
+        tdcpb_check_hash(args.dcp_path)
+    except TdcpbException as _err:
+        logging.error(_err)
+        return 1
+    return 0
+
+if __name__ == "__main__":
+   sys.exit(main(sys.argv))
+
