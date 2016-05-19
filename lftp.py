@@ -12,7 +12,7 @@ from common import TdcpbException
 logger = logging.getLogger('TdcpbLogger')
 
 class Lftp(object):
-    LFTP_CMDS="set xfer:log true;  mirror --verbose=3 -Rc {local} {remote} {dry_run} ; quit"
+    LFTP_CMDS="set xfer:log true; set net:reconnect-interval-base 20; set net:max-retries 2; mirror --verbose=3 -Rc {local} {remote} {dry_run} ; quit"
     #LFTP_CMDS="set xfer:log true; mirror --verbose=1 -Rc {local} {remote} {dry_run} ; quit"
     LFTP_SSL_CMDS="set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true;  irror --verbose=3 -Rc -{} {} {} ; quit"
 
@@ -80,23 +80,25 @@ class Lftp(object):
         return 0
 
     def run_lftp(self):
+        nb_data = -1
         sync = SP.Popen(self.cmd, env= self.my_env, stdout = SP.PIPE, stderr = SP.PIPE)
         (stdout, stderr) = sync.communicate()
         logger.debug("STDOUT")
         logger.debug("\n{}".format(stdout))
         logger.debug("END STDOUT")
         logger.debug("return code: {}".format(sync.returncode))
-        nb_data=self.is_data_tansfered(stdout)
-        if (nb_data > 0) :
-            logger.info(u"{} bytes transfered to library".format(nb_data))
-        elif nb_data == 0:
-            logger.info(u"No new data transfered")
-
-        if sync.returncode:
-            _msg = "FTP command failed"
+        if sync.returncode == 0:
+            nb_data=self.is_data_tansfered(stdout)
+            if (nb_data > 0) :
+                logger.info(u"{} bytes transfered to library".format(nb_data))
+            elif nb_data == 0:
+                logger.info(u"No new data transfered")
+        elif sync.returncode:
+            _msg = "FTP command failed returncode= {} ".format(sync.returncode)
             logger.error(_msg)
             logger.error(stderr)
             raise TdcpbException(_msg)
+        return nb_data
 
 
 
