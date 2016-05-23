@@ -57,7 +57,9 @@ Machine:                 $hostname ($ip)
 RMQ: Le transfert du DCP vers la librairie est en cours.
 
 Cordialement
-The DCP Bay
+
+L'équipe Indé-CP
+01 86 95 02 25
 """
 
 TPL_FTP_OK = \
@@ -66,19 +68,44 @@ Bonjour
 LE DCP $name à été transféré sur la librairie
 
 Cordialement
-The DCP Bay
+
+L'équipe Indé-CP
+01 86 95 02 25
 """
 
 TPL_FTP_KO = \
 """
 Bonjour
-L transfert du DCP $name à échoué.
+Le transfert du DCP $name à échoué.
 
 Vous pouvez nous joindre à contacter@tdcpb.org pour vous aider
-à resoudre le problème
+à résoudre le problème
 
 Cordialement
-The DCP Bay
+
+L'équipe Indé-CP
+01 86 95 02 25
+"""
+
+TPL_VERFICATION_KO = \
+"""
+Bonjour
+Le DCP $name est corrompus.
+
+L'équipe technique a aussi recus une notification pour ce problème.
+
+Vous pouvez réparer ce DCP en vous conectant sur
+http://tuco.tdcpb.org/exhibitor/downloads
+et lancer une vérification du DCP (icône en forme de clef à molette) sur le DCP
+$name
+
+Vous pouvez nous joindre à contacter@indecp.org pour vous aider
+à résoudre le problème
+
+Cordialement
+
+L'équipe Indé-CP
+01 86 95 02 25
 """
 
 
@@ -174,6 +201,35 @@ def sendMailFtpKo(p_torrent_msg, p_config_data) :
         logger.debug("Sending mail to %s"%(msg['To']))
         smtpSendMail(msg, p_config_data)
         time.sleep(0.5)
+
+def sendMailVerficationKo(p_torrent_msg, p_config_data) :
+    _subject = "[INDE-CP][ERREUR] DCP {} corrompu ".format(p_torrent_msg["name"])
+    _tpl = string.Template(TPL_VERFICATION_KO)
+    _tpl_values = {
+        'name'      : p_torrent_msg["name"],
+        }
+    _body = _tpl.substitute(_tpl_values)
+    msg = MIMEMultipart()
+    msg['Subject'] = _subject
+    msg['From'] = p_config_data["expeditor"]
+
+    msg['tdcpb-name'] = p_torrent_msg["name"]
+    msg['tdcpb-reception'] = p_torrent_msg["time"]
+    msg['tdcpb-reception-dir'] = p_torrent_msg["dir"]
+    msg['tdcpb-hash'] = p_torrent_msg["hash"]
+    msg['tdcpb-host'] = p_torrent_msg["hostname"]
+    msg['tdcpb-ip'] = p_torrent_msg["ip"]
+    msg['ftp-status'] = "KO"
+    msg.attach(MIMEText(_body, 'plain', 'utf-8'))
+    for _receiver in p_config_data["receivers"]:
+        if msg.has_key('To'):
+            msg.replace_header('To',_receiver)
+        else:
+            msg['To'] = _receiver
+        logger.debug("Sending mail to %s"%(msg['To']))
+        smtpSendMail(msg, p_config_data)
+        time.sleep(0.5)
+
 
 
 
@@ -272,17 +328,19 @@ def main(argv):
 
     _dir_path = os.path.join(torrent_msg["dir"],torrent_msg["name"])
     # Verify received content
-    # First shortt veridication
+    # 1st short verification
     try:
         tdcpb_check(_dir_path, u'short')
     except TdcpbException as _err:
         logger.error(_err)
+        sendMailVerficationKo(torrent_msg, config_data)
         return 1
     # 2nd long verification
     try:
         tdcpb_check(_dir_path, u'long')
     except TdcpbException as _err:
         logger.error(_err)
+        sendMailVerficationKo(torrent_msg, config_data)
         return 1
 
 
@@ -292,8 +350,8 @@ def main(argv):
             run_seed(torrent_msg["name"], config_data)
         except TdcpbException as _err:
             logger.error(_err)
+
     if 'ftp-library' in config_data and config_data['ftp-library'] == True :
-        print "FTP vers la librairie"
         try:
 
             ftp = Lftp(_dir_path, config_data)
