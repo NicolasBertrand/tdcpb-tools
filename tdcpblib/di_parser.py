@@ -30,12 +30,12 @@
 import sys
 import os.path
 from lxml import etree
-import logging
 import hashlib
 from functools import partial
 from urlparse import urlparse
 
 from common import TdcpbException
+from . import logger
 
 def list_all_files(p_path):
     fileList = []
@@ -53,9 +53,9 @@ def list_all_files(p_path):
             f = os.path.join(root,file)
             fileSize = fileSize + os.path.getsize(f)
             fileList.append(f)
-    logging.debug("Total Size is {0} bytes".format(fileSize))
-    logging.debug("Total Files: {} ".format(len(fileList)))
-    logging.debug("Total Folders: {}".format(folderCount))
+    logger.debug("Total Size is {0} bytes".format(fileSize))
+    logger.debug("Total Files: {} ".format(len(fileList)))
+    logger.debug("Total Folders: {}".format(folderCount))
     # return relative path
     fileList = [ _w.split(p_path)[1] for _w in fileList]
     # remove leading "/"
@@ -118,7 +118,7 @@ class AssetmapParser(object):
         """ Get Namespaces """
         _ns = self.tree.getroot().tag[1:].split("}")[0]
         self.ns = {'am': _ns}
-        logging.debug("Namespace is {}".format(self.ns))
+        logger.debug("Namespace is {}".format(self.ns))
 
 
     def _FindOne(self, p_tag, p_elem = None) :
@@ -239,7 +239,7 @@ class PklParser(AssetmapParser):
         self.pkl_data[_tag] = self._FindOne('./pkl:{}'.format(_tag)).text
         if self.pkl_data[_tag] != self.pkl_urn_id:
             _msg = "Id of PKL did not match one in AssetMap"
-            logging.error("ID in PKL: {} ID of PKL in AssetMap: {}".format(
+            logger.error("ID in PKL: {} ID of PKL in AssetMap: {}".format(
                 self.pkl_data[_tag], self.pkl_urn_id))
             raise DiError, _msg
         _tag = 'IssueDate'
@@ -268,7 +268,7 @@ class DiParser(object):
             self.getAssetmap()
             self._assetmap_xml = AssetmapParser(self.assetmap_path)
         except DiError, msg:
-            logging.error(msg)
+            logger.error(msg)
             return 0
         self.am_assets = self._assetmap_xml.GetAllAssets()
         _dcp_files = list(self.am_assets.viewvalues())
@@ -285,41 +285,41 @@ class DiParser(object):
         if not self.isVolindexPresent():
             _msg = "No VOLINDEX found in DCP folder({}) ".format(
                 self.p_dcp_folder)
-            logging.error(_msg)
+            logger.error(_msg)
             return 0
         try:
             self.getAssetmap()
             self._assetmap_xml = AssetmapParser(self.assetmap_path)
         except DiError, msg:
-            logging.error(msg)
+            logger.error(msg)
             return 0
         self.am_assets = self._assetmap_xml.GetAllAssets()
-        logging.debug("Found {} assets".format(len(self.am_assets)))
+        logger.debug("Found {} assets".format(len(self.am_assets)))
         self.pkls = self._assetmap_xml.GetPkls()
-        logging.debug("Found {} PKLS".format(len(self.pkls)))
+        logger.debug("Found {} PKLS".format(len(self.pkls)))
         if len(self.pkls) == 0:
             _msg = "No PKL found. Bad DCP"
-            logging.error(_msg)
+            logger.error(_msg)
             return 0
         for _pkl in self.pkls :
             _pkl_urn_id = _pkl
             _pkl_path= os.path.join(self.p_dcp_folder, self.am_assets[_pkl_urn_id])
-            logging.debug("Parsing PKL: {}".format(os.path.basename(_pkl_path)))
+            logger.debug("Parsing PKL: {}".format(os.path.basename(_pkl_path)))
             try:
                 _pkl_xml = PklParser(_pkl_path, _pkl_urn_id)
             except DiError, msg:
-                logging.error(msg)
+                logger.error(msg)
                 return 0
             # Valid pkl file increasse asset counter
             _nb_assets +=1
             _msg = "Found : {} ".format(self.am_assets[_pkl_urn_id])
-            logging.debug(_msg)
+            logger.debug(_msg)
 
             _pkl_assets = _pkl_xml.GetAssets()
             try:
                 _nb_assets += self._ExistsAssets(_pkl_assets)
             except DiError, _msg:
-                logging.error(_msg)
+                logger.error(_msg)
                 return 0
             if (_nb_assets != len (self.am_assets)):
                 _msg = "Invalid number of assets,( {} in AssetMap, {} counted)"\
@@ -329,23 +329,23 @@ class DiParser(object):
         _dcp_files = self.list_dcp_files()
         _dir_files = list_all_files(self.p_dcp_folder)
         if len(_dir_files) > len(_dcp_files):
-            logging.error("Unexpected files or dir present in DCP folder {}"\
+            logger.error("Unexpected files or dir present in DCP folder {}"\
                 .format(self.p_dcp_folder))
             _unexpected = list(set(_dir_files) - set(_dcp_files))
-            logging.error("Unexpected files or dir : ")
+            logger.error("Unexpected files or dir : ")
             for _f in _unexpected: 
-                logging.error("   {}".format(_f))
+                logger.error("   {}".format(_f))
  
-            logging.error("Files in directory = {} Excpected files in DCP = {}".\
+            logger.error("Files in directory = {} Excpected files in DCP = {}".\
                     format(len(_dir_files), len(_dcp_files)))
             return 0
         elif len(_dir_files) < len(_dcp_files):
             _msg="DCP {} contains less file then expected : files in dir = {} expected fils ={} "\
                 .format(self.p_dcp_folder, len(_dir_files),  len(_dcp_files) )
-            logging.error(_msg)
+            logger.error(_msg)
             return 0
         else :
-            logging.debug("files in DCP and files in Assetmap are coherent")
+            logger.debug("files in DCP and files in Assetmap are coherent")
 
         return _nb_assets
 
@@ -355,41 +355,41 @@ class DiParser(object):
         if not self.isVolindexPresent():
             _msg = "No VOLINDEX found in DCP folder({}) ".format(
                 self.p_dcp_folder)
-            logging.error(_msg)
+            logger.error(_msg)
             return "KO"
         try:
             self.getAssetmap()
             self._assetmap_xml = AssetmapParser(self.assetmap_path)
         except DiError, msg:
-            logging.error(msg)
+            logger.error(msg)
             return "KO"
         self.am_assets = self._assetmap_xml.GetAllAssets()
-        logging.debug("Found {} assets".format(len(self.am_assets)))
+        logger.debug("Found {} assets".format(len(self.am_assets)))
         self.pkls = self._assetmap_xml.GetPkls()
         if len(self.pkls) == 0:
             _msg = "No PKL found. Bad DCP"
-            logging.error(_msg)
+            logger.error(_msg)
             return "KO"
         for _pkl in self.pkls :
             _pkl_urn_id = _pkl
             _pkl_path= os.path.join(self.p_dcp_folder, self.am_assets[_pkl_urn_id])
-            logging.debug("Parsing PKL: {}".format(os.path.basename(_pkl_path)))
+            logger.debug("Parsing PKL: {}".format(os.path.basename(_pkl_path)))
             try:
                 _pkl_xml = PklParser(_pkl_path, _pkl_urn_id)
             except DiError, msg:
-                logging.error(msg)
+                logger.error(msg)
                 return "KO"
             # Valid pkl file increasse asset counter
             _nb_assets +=1
             _msg = "Found : {} ".format(self.am_assets[_pkl_urn_id])
-            logging.debug(_msg)
+            logger.debug(_msg)
 
             _pkl_assets = _pkl_xml.GetAssets()
             try:
                 self._ExistsAssets(_pkl_assets)
                 self._VerifyHash()
             except DiError, _msg:
-                logging.error(_msg)
+                logger.error(_msg)
                 return "KO"
         return "OK"
 
@@ -409,12 +409,12 @@ class DiParser(object):
     def getAssetmap(self) :
         _assetmap = os.path.join(self.p_dcp_folder, "ASSETMAP")
         if os.path.isfile(_assetmap):
-            logging.debug("The DCP is in interop format")
+            logger.debug("The DCP is in interop format")
             self.assetmap_path = _assetmap
         else:
             _assetmap = os.path.join(self.p_dcp_folder, "ASSETMAP.xml")
             if os.path.isfile(_assetmap):
-                logging.debug("The DCP is in SMPTE format")
+                logger.debug("The DCP is in SMPTE format")
                 self.assetmap_path = _assetmap
             else:
                 _emsg="No ASSETMAP file found"
@@ -444,7 +444,7 @@ class DiParser(object):
                 if os.path.exists(_path):
                     _asset['Path'] = _path
                     _msg = "Found : {} ".format(_path[len(self.p_dcp_folder):])
-                    logging.debug(_msg)
+                    logger.debug(_msg)
                 else:
                     _msg = "Asset {} not in DCP directory".format(
                         _path[len(self.p_dcp_folder):])
@@ -452,7 +452,7 @@ class DiParser(object):
                 if os.stat(_path).st_size != int(_v['Size']) :
                     _msg = "Asset {} has wrong size".format(
                         _path[len(self.p_dcp_folder):])
-                    logging.error("stat size = {}, Size in PKL = {}".format(
+                    logger.error("stat size = {}, Size in PKL = {}".format(
                         os.stat(_path).st_size, _v['Size']))
                     raise DiError(_msg)
                 self.assets[_k] = _asset
@@ -464,15 +464,15 @@ class DiParser(object):
     def _VerifyHash(self):
         for _k, _v in self.assets.iteritems():
             _msg = "Checking hash of {}".format(_v['Path'])
-            logging.debug(_msg)
+            logger.debug(_msg)
             _sum = self._HashSum(_v['Path'])
             if _sum == _v['Hash']:
                 _msg = " Hash verification OK ({})".format(_v['Path'])
-                logging.debug(_msg)
+                logger.debug(_msg)
             else:
                 _msg = " Hash verification failed for file {} \
 CALC SUM = {}\n EXPT SUM = {} ".format( _v['Path'], _sum, _v['Hash'] )
-                logging.error(_msg)
+                logger.error(_msg)
                 raise DiError(_msg)
 
     def _HashSum(self, p_filepath):
@@ -489,7 +489,6 @@ CALC SUM = {}\n EXPT SUM = {} ".format( _v['Path'], _sum, _v['Hash'] )
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     DCP = DiParser(sys.argv[1])
     dcp_files = DCP.list_dcp_files()
     print dcp_files

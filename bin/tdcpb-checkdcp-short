@@ -31,11 +31,10 @@ import sys
 import logging
 import argparse
 
+from tdcpblib import logger
 from tdcpblib.common import TdcpbException
-from tdcpblib.common import create_logger
 from tdcpblib.tdcpb_checks import tdcpb_check
 
-logger = create_logger()
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Check if a DCP is well formed')
@@ -49,7 +48,6 @@ def main(argv):
                    help='debug mode')
 
     args = parser.parse_args()
-    print args.debug
     logger.setLevel(args.debug)
 
     if not args.dcp_path:

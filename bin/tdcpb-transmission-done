@@ -24,10 +24,9 @@ from tdcpblib.common import create_logger
 from tdcpblib.common import TdcpbException
 from tdcpblib.common import parseConfig
 from tdcpblib        import CONFIG_FILE
+from tdcpblib        import logger
 from tdcpblib.tdcpb_checks import tdcpb_check
 
-logger = create_logger()
-logger.info('Running exec-done.py')
 
 
 
@@ -273,11 +272,19 @@ def main(argv):
 
     _dir_path = os.path.join(torrent_msg["dir"],torrent_msg["name"])
     # Verify received content
+    # First shortt veridication
     try:
         tdcpb_check(_dir_path, u'short')
     except TdcpbException as _err:
         logger.error(_err)
         return 1
+    # 2nd long verification
+    try:
+        tdcpb_check(_dir_path, u'long')
+    except TdcpbException as _err:
+        logger.error(_err)
+        return 1
+
 
     sendMailReceptionOk(torrent_msg, config_data)
     if 'run-seed' in config_data and config_data['run-seed'] == True :

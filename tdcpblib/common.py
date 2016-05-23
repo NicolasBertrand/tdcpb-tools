@@ -20,7 +20,7 @@ def parseConfig(p_config_file):
 
 def create_logger():
     logger = logging.getLogger('TdcpbLogger')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # create formatter
     formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s # %(filename)s %(funcName)s l %(lineno)d')
@@ -37,7 +37,7 @@ def create_logger():
 
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(logging.INFO)
 
     logger.addHandler(ch)
 

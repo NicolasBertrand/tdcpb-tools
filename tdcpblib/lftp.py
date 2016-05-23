@@ -5,11 +5,10 @@
 
 import os.path
 import re
-import logging
 import subprocess as SP
 from common import TdcpbException
+from . import logger
 
-logger = logging.getLogger('TdcpbLogger')
 
 class Lftp(object):
     LFTP_CMDS="set xfer:log true; set net:reconnect-interval-base 20; set net:max-retries 2; mirror --verbose=3 -Rc {local} {remote} {dry_run} ; quit"
