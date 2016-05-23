@@ -1,0 +1,158 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# -*- Mode: Python -*-
+# vim:si:ai:et:sw=4:sts=4:ts=4
+#
+#
+# Copyright Nicolas Bertrand (nico@isf.cc), 2014
+#
+# This file is part of DcpIngest.
+#
+#    DcpIngest is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Luciole is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Luciole.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# Usage:
+# TBD
+
+import Queue
+import argparse
+import threading
+import time
+import subprocess as SP
+import os
+import logging
+import sys
+
+
+import tdcpblib.di_parser as T_PARSER
+from tdcpblib.common import TdcpbException
+
+TRACKER="http://10.10.10.31:2710/announce"
+COMMENT="Created with a slice of lemon pie"
+
+class TorrentCreatorThread (threading.Thread):
+    def __init__(self, torrent_path, dcp_path, q):
+        threading.Thread.__init__(self)
+        #self.threadID = threadID
+        self.torrent_path = torrent_path
+        logging.debug("torrent path {}".format(torrent_path))
+        self.dcp_path = dcp_path
+        self.announce = TRACKER
+        self.torrent_comment = COMMENT
+        self.q = q
+    def run(self):
+        logging.debug("Starting Torrent creation")
+        self.create_torrent()
+        logging.debug("Exiting torrent creation")
+    def create_torrent(self):
+        #_cmd = "/usr/bin/transmission-create -p -t \"{}\" -o \"{}\" -c \"{}\" {}"\
+        #    .format(self.announce, self.torrent_path, self.torrent_comment, self.dcp_path)
+        _cmd = [
+            "/usr/bin/transmission-create",
+            "-p",   # private torrent
+            "-t",   # tracker
+            self.announce,
+            "-o",  # output torrent
+            self.torrent_path,
+            "-c",   # comment
+            self.torrent_comment,
+            self.dcp_path
+        ]
+        logging.debug("torrent command: {}".format(" ".join(_cmd)))
+
+        _sp = SP.Popen(_cmd, stdout=SP.PIPE, stderr=SP.PIPE)
+        _stdout, _stderr = _sp.communicate()
+        logging.debug(_stdout)
+        logging.debug(_stderr)
+        if not _stderr:
+            # set torrent readable by all
+            os.chmod(self.torrent_path, 0644)
+            self.q.put("{}:TORRENT_OK".format(self.dcp_path))
+        else:
+            self.q.put("{}:TORRENT_KO".format(self.dcp_path))
+            print _stderr
+
+def tdcpb_make_torrent(p_in_path, p_out_torrent_dir):
+    if not os.path.exists(p_in_path):
+        _err = "DCP {} does not exists".format(p_in_path)
+        raise TdcpbException(_err)
+    if not os.path.exists(p_out_torrent_dir):
+        _err = "Torrent directory {} does not exists".format(p_out_torrent_dir)
+        raise TdcpbException(_err)
+
+    in_path = os.path.abspath(p_in_path)
+    torrent_base = os.path.basename(in_path)
+    torrent_file = os.path.join(os.path.abspath(p_out_torrent_dir),
+                                torrent_base + ".torrent")
+    logging.debug("Torrent path: {}".format(torrent_file))
+    workQueue = Queue.Queue(10)
+    thread1 = TorrentCreatorThread(torrent_file, in_path, workQueue)
+    thread1.start()
+    logging.info("Started torrent creation for {}".format(os.path.basename(os.path.abspath(p_in_path))))
+    while True:
+        if not workQueue.empty():
+            data = workQueue.get()
+            data = data.split(':')
+            if data[1] == "TORRENT_OK":
+                logging.info("torrent generation OK for {}"\
+                    .format(os.path.basename(os.path.abspath(p_in_path))))
+                break
+            elif data[1] == "TORRENT_KO":
+                _err = "torrent generation failed for {}"\
+                    .format(os.path.basename(os.path.abspath(p_in_path)))
+                raise TdcpbException(_err)
+        logging.debug("Torrent creation in progress...")
+        time.sleep(5)
+    # checck that torrent really exist
+    if not os.path.exists(torrent_file):
+        _err = "Something goes wrong during torrent creation for {}"\
+            .format(os.path.basename(os.path.abspath(p_in_path)))
+
+        raise TdcpbException(_err)
+
+    logging.debug("Torrent generation of {} finished (stored in {})"\
+                .format(os.path.basename(os.path.abspath(p_in_path)), torrent_file))
+
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(description='Create torents')
+    parser.add_argument('in_path',
+                metavar='PATH',
+                type = str,
+                nargs = "?",
+                help = 'Input path to a file or directory' )
+    parser.add_argument('out_torrent_dir',
+                metavar='TORRENT_PATH_DIR',
+                type = str,
+                nargs = "?" ,
+                help = "Directory path where the folder will be stored." )
+    parser.add_argument('-d', '--debug', dest='debug', action='store_const',
+                   const=logging.DEBUG, default=logging.INFO,
+                   help='debug mode')
+
+    args = parser.parse_args()
+    logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(message)s - %(filename)s %(funcName)s line %(lineno)d thread %(thread)d/%(threadName)s',
+                         level=args.debug)
+    try:
+        tdcpb_make_torrent(args.in_path, args.out_torrent_dir)
+    except TdcpbException as _err:
+        logging.error(_err)
+        return 1
+    return 0
+
+if __name__ == "__main__":
+   sys.exit(main(sys.argv))
+
+

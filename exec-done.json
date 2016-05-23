@@ -1,11 +1,11 @@
 {
-"smtp":"10.10.10.232",
+"smtp":"10.10.10.132",
 "expeditor":"robots@tdcpb.org",
-"receivers":["lutins@tdcpb.org"],
-"ftp-library" : false,
-"ftp-user" : "user",
-"ftp-pass" : "pass",
-"ftp-host" : "XXXXX",
+"receivers":["nico@isf.cc"],
+"ftp-library" : true,
+"ftp-user" : "ingest",
+"ftp-pass" : "ingest",
+"ftp-host" : "192.168.43.216",
 "ftp-remote-path" : "/",
-"ftp-ssl": true
+"ftp-ssl": false
 }

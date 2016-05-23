@@ -12,9 +12,9 @@ from tdcpblib.common import parseConfig
 from tdcpblib.common import TdcpbException
 from tdcpblib.common import create_logger
 from tdcpblib.lftp   import Lftp
+from tdcpblib        import CONFIG_FILE
 
 logger = create_logger()
-CONFIG_FILE="/home/nicolas/tmp//exec-done.json"
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Copy DCP via FTP')

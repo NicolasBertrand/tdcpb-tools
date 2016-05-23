@@ -30,32 +30,12 @@
 import sys
 import logging
 import argparse
-import os.path
 
-import tdcpblib.di_parser as T_PARSER
 from tdcpblib.common import TdcpbException
+from tdcpblib.common import create_logger
+from tdcpblib.tdcpb_checks import tdcpb_check
 
-def tdcpb_check_files(p_dcp_folder):
-    _dcp_folder = os.path.abspath(p_dcp_folder)
-    logging.info('File check started for {}'\
-        .format(os.path.basename(_dcp_folder)))
-    # do some basic check
-    if not os.path.exists(_dcp_folder):
-        _msg = "dcp directory {} does not exist"\
-            .format(_dcp_folder)
-        raise TdcpbException(_msg)
-    #TODO : why not use normpath ?
-    try :
-        DCP = T_PARSER.DiParser(_dcp_folder)
-        _nb = DCP.check_files()
-    except T_PARSER. DiError as _err:
-        raise TdcpbException(_err)
-    if _nb == 0:
-        _err = "DCP {} not well formed "\
-            .format(os.path.basename(_dcp_folder))
-        raise TdcpbException(_err)
-    logging.info('File check OK for {}'\
-        .format(os.path.basename(_dcp_folder)))
+logger = create_logger()
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Check if a DCP is well formed')
@@ -69,15 +49,16 @@ def main(argv):
                    help='debug mode')
 
     args = parser.parse_args()
-    logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(message)s - %(filename)s %(funcName)s line %(lineno)d thread %(thread)d/%(threadName)s',
-                         level=args.debug)
+    print args.debug
+    logger.setLevel(args.debug)
+
     if not args.dcp_path:
-        logging.error("No DCP source")
+        logger.error("No DCP source")
         return 1
     try:
-        tdcpb_check_files(args.dcp_path)
+        tdcpb_check(args.dcp_path, u'short')
     except TdcpbException as _err:
-        logging.error(_err)
+        logger.error(_err)
         return 1
     return 0
 
