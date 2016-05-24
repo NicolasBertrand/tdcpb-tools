@@ -9,13 +9,14 @@ setup(
     description  = "colletion of toools for tdcpb: ingets, verify, transmission post exec",
     author       = "Nicolas Bertrand",
     author_email = "nicolas@indecp.org",
-    version      = "0.2",
+    version      = "0.4",
     scripts      = [
         "bin/tdcpbftp",
         "bin/tdcpb-checkdcp-short",
         "bin/tdcpb-checkdcp-long",
         "bin/tdcpb-make-torrent",
-        "bin/tdcpb-transmission-done"
+        "bin/tdcpb-transmission-done",
+        "bin/tdcpb-detect-disk-overload"
                    ],
     packages    = ["tdcpblib"]
 )

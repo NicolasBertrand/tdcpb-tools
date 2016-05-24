@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# -*- Mode: Python -*-
+# vim:si:ai:et:sw=4:sts=4:ts=4
+#
+
+import sys
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
+
+from tdcpblib import logger
+from tdcpblib.disk_usage import disk_partitions, disk_usage
+from tdcpblib.send_mail import send_email_to
+from tdcpblib.common import get_tinc_ip, get_hostname
+from tdcpblib.common import parseConfig
+from tdcpblib        import CONFIG_FILE
+
+
+PERCENT_MAX = 80.0
+
+def get_percentage(p_config_data):
+    for part in disk_partitions():
+        du = disk_usage(part.mountpoint)
+
+        if du.percent > PERCENT_MAX:
+            _hostname = "{} ({})".format(get_hostname(), get_tinc_ip())
+            _body= " {}  : overload for {} ({}% used -- free {:5.1f} GB) "\
+                .format(_hostname, part.mountpoint, du.percent, (du.free*1.0) /2**30 )
+            logger.warning(_body)
+
+            msg = MIMEMultipart()
+            msg['Subject'] = "[INDECP-ERROR] DISK OVERLOAD: {} ".format(_hostname)
+            msg['From'] = p_config_data["expeditor"]
+            msg['tdcpb-error'] = u"disk overload"
+            msg.attach(MIMEText(_body, 'plain', 'utf-8'))
+            send_email_to(msg,  ['lutins@tdcpb.org'], p_config_data['smtp'])
+
+def main(argv):
+    try :
+        config_data = parseConfig(CONFIG_FILE)
+    except ValueError as err:
+        msg = "JSON parse ERROR {}".format(err)
+        logger.error(msg)
+        return
+    except IOError as err:
+        msg = "IOError {}".format(err)
+        logger.error(msg)
+        return
+    get_percentage(config_data)
+
+if __name__ == '__main__':
+   sys.exit(main(sys.argv))

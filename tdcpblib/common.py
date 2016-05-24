@@ -4,8 +4,9 @@
 # vim:si:ai:et:sw=4:sts=4:ts=4
 
 import json
-
+import socket
 import logging
+import commands
 from logging.handlers import TimedRotatingFileHandler
 
 class TdcpbException(Exception):
@@ -42,4 +43,15 @@ def create_logger():
     logger.addHandler(ch)
 
     return logger
+
+def get_tinc_ip():
+    _ips = commands.getoutput("hostname -I").split()
+    for _ip in _ips:
+        if _ip.startswith("10.10.10") :
+            return _ip
+    return None
+
+def get_hostname():
+    return socket.gethostname()
+
 
