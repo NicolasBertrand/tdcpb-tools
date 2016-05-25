@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # -*- Mode: Python -*-
 # vim:si:ai:et:sw=4:sts=4:ts=4
-
+import sys
 import os.path
 import re
 import subprocess as SP
@@ -11,9 +11,10 @@ from . import logger
 
 
 class Lftp(object):
-    LFTP_CMDS="set xfer:log true; set net:reconnect-interval-base 20; set net:max-retries 2; mirror --verbose=3 -Rc {local} {remote} {dry_run} ; quit"
+    LFTP_CMDS="set xfer:log true; set net:reconnect-interval-base 20; set net:max-retries 2; mirror --verbose=3 -Rc {dry_run} {local} {remote} ; quit"
     #LFTP_CMDS="set xfer:log true; mirror --verbose=1 -Rc {local} {remote} {dry_run} ; quit"
-    LFTP_SSL_CMDS="set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true;  irror --verbose=3 -Rc -{} {} {} ; quit"
+    LFTP_SSL_CMDS=\
+    "set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true;  mirror --verbose=3 -Rc {dry_run} {local} {remote} ; quit"
 
     def __init__(self, p_dir_path, p_config_data, dry_run = False ) :
         self.config_data = p_config_data
@@ -26,15 +27,16 @@ class Lftp(object):
         try:
             if self.config_data['ftp-remote-path'] is None:
                 logger.error('No remote path specified')
-                sys.exit(1)
+                _msg=u"No remote path specified', please verify".format(self.config_data['ftp-remote-path'])
+                raise TdcpbException(_msg)
             if self.config_data['ftp-remote-path'] == "/":
                 lftp_cmd = lftp_tpl.format(local = self.dir_path , remote='', dry_run='')
             else:
                 if not (self.config_data['ftp-remote-path']).endswith("/"):
-                    logger.error("ftp-remote-path({}) shall ends with /, please verify".format(self.config_data['ftp-remote-path']))
-                    sys.exit(1)
-                lftp_cmd = lftp_tpl.format( local = self.dir_path, 
-                                            remote = self.config_data['ftp-remote-path'], 
+                    _msg=u"ftp-remote-path({}) shall ends with /, please verify".format(self.config_data['ftp-remote-path'])
+                    raise TdcpbException(_msg)
+                lftp_cmd = lftp_tpl.format( local = self.dir_path,
+                                            remote = self.config_data['ftp-remote-path'],
                                             dry_run='')
             _ftp_connect="ftp://{}:{}@{}".format(self.config_data['ftp-user'],
                                                  self.config_data['ftp-pass'],

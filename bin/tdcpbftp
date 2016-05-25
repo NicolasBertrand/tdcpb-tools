@@ -10,11 +10,10 @@ import os.path
 
 from tdcpblib.common import parseConfig
 from tdcpblib.common import TdcpbException
-from tdcpblib.common import create_logger
+from tdcpblib import logger
 from tdcpblib.lftp   import Lftp
 from tdcpblib        import CONFIG_FILE
 
-logger = create_logger()
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Copy DCP via FTP')
@@ -46,7 +45,7 @@ def main(argv):
 
     if not os.path.exists(args.dir_path):
         _err = "path {} does not exists".format(args.dir_path)
-        logging.error(_err)
+        logger.error(_err)
         return 1
 
     if 'ftp-library' in config_data and config_data['ftp-library'] == True :
@@ -58,9 +57,10 @@ def main(argv):
         except TdcpbException as err :
             #smoething goes wrong in copy
             logger.error("FTP transfer FAIL: {}".format(err))
+            return 1
         else:
             logger.info("FTP transfer OK")
-
+    return 0
 
 
 if __name__ == "__main__":
