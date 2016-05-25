@@ -56,7 +56,7 @@ class Lftp(object):
             raise TdcpbException(msg)
 
     def mirror(self):
-        logger.debug("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
+        logger.info("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
         try :
             self.run_lftp()
         except TdcpbException as _err:
@@ -68,16 +68,15 @@ class Lftp(object):
 
     def is_data_tansfered(self, stdout):
         if "\nNew:" in stdout:
-            print "New files transferred"
-        p =re.compile('\d+ bytes transferred')
-        res = p.search(stdout)
-        if res:
-            print "res {}".format(res.group())
-            p2 =re.compile('\d+')
-            res2 = p2.search(res.group())
-            if res2:
-                print "{}".format(res2.group())
-                return int(res2.group())
+            p =re.compile('\d+ bytes transferred')
+            res = p.search(stdout)
+            if res:
+                p2 =re.compile('\d+')
+                res2 = p2.search(res.group())
+                if res2:
+                    return int(res2.group())
+            # if "New" found and not found number od transfered by return invalid
+            return -1
         return 0
 
     def run_lftp(self):
@@ -94,6 +93,9 @@ class Lftp(object):
                 logger.info(u"{} bytes transfered to library".format(nb_data))
             elif nb_data == 0:
                 logger.info(u"No new data transfered")
+            else:
+                _msg="Invalid inyterpreatation of stdout \n:{}".format(stdout)
+                raise TdcpbException(_msg)
         elif sync.returncode:
             _msg = "FTP command failed returncode= {} ".format(sync.returncode)
             logger.error(_msg)
