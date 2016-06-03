@@ -38,30 +38,31 @@ from tdcpblib import logger
 from tdcpblib.torrent_meta import TorrentMeta
 from tdcpblib.common import get_host_torrent_login
 from tdcpblib.common import TdcpbException
+from tdcpblib.common import sizeof_fmt
 from tdcpblib.torrent_client import TransmissionClient
 
 
 def main(argv):
     parser = argparse.ArgumentParser(description='Remove torrent in host')
-    parser.add_argument('torrent_file',
-                metavar='TORRENT_FILE',
-                type = str,
-                help = 'Path to torrent file' )
     parser.add_argument('host',
                 metavar='HOSTNAME',
                 type = str,
                 help = 'hostname where torrent will be removed' )
+    parser.add_argument('torrent_file',
+                metavar='TORRENT_FILE',
+                type = str,
+                help = 'Path to torrent file' )
 
-
-    #parser.add_argument('-d', '--debug', dest='debug', action='store_const',
-    #               const=logging.DEBUG, default=logging.INFO,
-    #               help='debug mode')
+    parser.add_argument('-f', '--force',
+                    action='store_true',
+                   help='remove torrent data on server')
 
     args = parser.parse_args()
     if not os.path.exists(args.torrent_file):
         logger.error('Invalid torrent path: {}'.format(args.torrent_file))
         return 1
-
+    if args.force:
+        logger.info('Remove content option acvivated')
     try:
         tinfo = TorrentMeta.info(args.torrent_file)
     except TdcpbException as err:
@@ -84,19 +85,23 @@ def main(argv):
         logger.error('{}'.format(err))
         return 1
     _torrents = _tc.get_torrents()['torrents']
-    pprint.pprint(_torrents)
-
-    if not any( _t['hash'] == tinfo['hash'] for _t in _torrents):
+    if not any( ((_t['hash'] == tinfo['hash']) and   (_t['name'] == tinfo['name'])) for _t in _torrents):
         err = "Torrent {} not found".format(tinfo['name'])
         logger.error('{}'.format(err))
         return 1
+    else :
+        print "{} {}".format( tinfo['name'], tinfo['hash'])
 
-    _tc.remove(tinfo['hash'])
+    _tc.remove(tinfo['hash'], delete_data=args.force)
+
 
     _torrents = _tc.get_torrents()['torrents']
     if not any( _t['hash'] == tinfo['hash'] for _t in _torrents):
-        msg= u'Torrent {} removed in {}'.format(tinfo['name'],args.host)
-        print msg
+        if args.force:
+            msg= u'Torrent {} removed and {} freed in {}'.\
+                    format(tinfo['name'], sizeof_fmt(tinfo['size']),args.host)
+        else:
+            msg= u'Torrent {} removed in {}'.format(tinfo['name'],args.host)
         logger.info(msg)
     return 0
 

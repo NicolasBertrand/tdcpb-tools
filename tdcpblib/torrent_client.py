@@ -45,6 +45,8 @@ class BitTorrentClient(object):
         pass
 
 class TransmissionClient(BitTorrentClient):
+    DELETE_TIMEOUT = 60
+
     def __init__(self):
         BitTorrentClient.__init__(self, TRANSMISSION_CLIENT)
         self.dict_client={}
@@ -91,8 +93,15 @@ class TransmissionClient(BitTorrentClient):
         return self.dict_client
     def add_torrent(self, torrent_path):
         pass
-    def remove(self, torrent_hash):
-        self.client.remove_torrent(torrent_hash)
+    def remove(self, torrent_hash, delete_data = False) :
+        if delete_data:
+            # increase temeout wgne deleting data
+            self.client.remove_torrent(torrent_hash,
+                                     delete_data = delete_data,
+                                     timeout = self.DELETE_TIMEOUT )
+        else:
+            self.client.remove_torrent(torrent_hash)
+
     def verify(self, torrent_hash):
         self.client.verify_torrent(torrent_hash)
 
