@@ -8,6 +8,7 @@ import socket
 import logging
 import commands
 from logging.handlers import TimedRotatingFileHandler
+import netrc
 
 class TdcpbException(Exception):
     def __init__(self, message, errors = None):
@@ -53,5 +54,13 @@ def get_tinc_ip():
 
 def get_hostname():
     return socket.gethostname()
+
+
+def get_host_torrent_login(p_hostname):
+    _netrc = netrc.netrc()
+    if p_hostname not in _netrc.hosts:
+        _err = u'Host {} unknown'.format(p_hostname)
+        raise TdcpbException(_err)
+    return _netrc.authenticators(p_hostname)
 
 

@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# -*- Mode: Python -*-
+# vim:si:ai:et:sw=4:sts=4:ts=4
+#
+#
+# Copyright Nicolas Bertrand (nico@isf.cc), 2014
+#
+# This file is part of DcpIngest.
+#
+#    DcpIngest is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    DcpIngest is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with DcpIngest.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# Usage:
+# DcpCheckHash.py /path/to/DCP
+#
+# The script verify the hash of each file in the DCP
+
+import sys
+#import logging
+import argparse
+import os.path
+import pprint
+
+
+from tdcpblib import logger
+from tdcpblib.torrent_meta import TorrentMeta
+from tdcpblib.common import get_host_torrent_login
+from tdcpblib.common import TdcpbException
+from tdcpblib.torrent_client import TransmissionClient
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(description='Remove torrent in host')
+    parser.add_argument('torrent_file',
+                metavar='TORRENT_FILE',
+                type = str,
+                help = 'Path to torrent file' )
+    parser.add_argument('host',
+                metavar='HOSTNAME',
+                type = str,
+                help = 'hostname where torrent will be removed' )
+
+
+    #parser.add_argument('-d', '--debug', dest='debug', action='store_const',
+    #               const=logging.DEBUG, default=logging.INFO,
+    #               help='debug mode')
+
+    args = parser.parse_args()
+    if not os.path.exists(args.torrent_file):
+        logger.error('Invalid torrent path: {}'.format(args.torrent_file))
+        return 1
+
+    try:
+        tinfo = TorrentMeta.info(args.torrent_file)
+    except TdcpbException as err:
+        logger.error('{}'.format(err))
+        return 1
+    try :
+        user, account, password = get_host_torrent_login(args.host)
+    except TdcpbException as err:
+        logger.error('{}'.format(err))
+        return 1
+
+    _tc = TransmissionClient()
+    try:
+        _tc.connect(
+                address = args.host,
+                port = 9091,
+                user = user,
+                password = password)
+    except TdcpbException as err:
+        logger.error('{}'.format(err))
+        return 1
+    _torrents = _tc.get_torrents()['torrents']
+    pprint.pprint(_torrents)
+
+    if not any( _t['hash'] == tinfo['hash'] for _t in _torrents):
+        err = "Torrent {} not found".format(tinfo['name'])
+        logger.error('{}'.format(err))
+        return 1
+
+    _tc.remove(tinfo['hash'])
+
+    _torrents = _tc.get_torrents()['torrents']
+    if not any( _t['hash'] == tinfo['hash'] for _t in _torrents):
+        msg= u'Torrent {} removed in {}'.format(tinfo['name'],args.host)
+        print msg
+        logger.info(msg)
+    return 0
+
+if __name__ == "__main__":
+   sys.exit(main(sys.argv))
+
