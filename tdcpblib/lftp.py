@@ -57,13 +57,24 @@ class Lftp(object):
 
     def mirror(self):
         logger.info("Starting FTP copy of {}".format(os.path.basename(self.dir_path)))
+        retry = False
         try :
             self.run_lftp()
         except TdcpbException as _err:
-            logger.error("Copy of {} FAILED".format(os.path.basename(self.dir_path)))
-            raise TdcpbException(_err)
+            retry = True
         else:
             logger.info("Copy of {} successfull".format(os.path.basename(self.dir_path)))
+
+        if retry:
+            logger.warning("Retrying mirror cmd via lftp")
+            try :
+                self.run_lftp()
+            except TdcpbException as _err:
+                logger.error("Copy of {} FAILED".format(os.path.basename(self.dir_path)))
+                raise TdcpbException(_err)
+            else:
+                logger.info("Copy of {} successfull".format(os.path.basename(self.dir_path)))
+
 
 
     def is_data_tansfered(self, stdout):
