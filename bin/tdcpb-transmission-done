@@ -41,7 +41,9 @@ Repertoire de reception: $dir
 Machine:                 $hostname ($ip)
 
 Cordialement
-The DCP Bay
+
+L'équipe Indé-CP
+01 86 95 02 25
 """
 
 TPL_RECEPTION_OK_FTP = \
@@ -78,7 +80,9 @@ TPL_FTP_KO = \
 Bonjour
 Le transfert du DCP $name à échoué.
 
-Vous pouvez nous joindre à contacter@tdcpb.org pour vous aider
+L'équipe technique a aussi recus une notification pour ce problème.
+
+Vous pouvez nous joindre à technique@indecp.org pour vous aider
 à résoudre le problème
 
 Cordialement
