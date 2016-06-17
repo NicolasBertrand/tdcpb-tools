@@ -45,7 +45,7 @@ class BitTorrentClient(object):
         pass
 
 class TransmissionClient(BitTorrentClient):
-    DELETE_TIMEOUT = 60
+    DELETE_TIMEOUT = 240
 
     def __init__(self):
         BitTorrentClient.__init__(self, TRANSMISSION_CLIENT)
