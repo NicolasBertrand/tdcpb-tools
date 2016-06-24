@@ -4,31 +4,30 @@
 # vim:si:ai:et:sw=4:sts=4:ts=4
 #
 #
-# Copyright Nicolas Bertrand (nico@isf.cc), 2014
+# Copyright Nicolas Bertrand (nicolas@indecp.org), 2016
 #
-# This file is part of DcpIngest.
+# This file is part of tdcpb-tools.
 #
-#    DcpIngest is free software: you can redistribute it and/or modify
+#    tdcpb-tools is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    DcpIngest is distributed in the hope that it will be useful,
+#    tdcpb-tools is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with DcpIngest.  If not, see <http://www.gnu.org/licenses/>.
+#    along with tdcpb-tools.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
 # Usage:
-# DcpCheckHash.py /path/to/DCP
+# cf tdcpb-remove-torrent -h
 #
-# The script verify the hash of each file in the DCP
+# Remove a torrent from a torrent client, delete of file on host can be forced
 
 import sys
-#import logging
 import argparse
 import os.path
 import pprint
@@ -46,6 +45,7 @@ DCPS_SOURCE_PATH={
         'ness':'/data/tdcpb/transmission/downloads/',
         'tdcpb31':'/data/tdcpb/transmission/downloads/',
         'gncr':'/data/tdcpb/DCP/',
+        'localhost':'/data/tdcpb/downloads',
         }
 
 def ssh_remove(p_host, p_DCP):
@@ -53,8 +53,8 @@ def ssh_remove(p_host, p_DCP):
         cmd_print = 'find {}/{} -print'.format(DCPS_SOURCE_PATH[p_host] , p_DCP)
         cmd_delete = 'find {}/{} -delete'.format(DCPS_SOURCE_PATH[p_host] , p_DCP)
     else:
-        print "No DCP source found for {}".format(p_host)
-        return 1
+        _msg = "No DCP source found for {}".format(p_host)
+        raise TdcpbException(_msg)
 
     client = paramiko.SSHClient()
     client._policy = paramiko.WarningPolicy()
@@ -75,30 +75,50 @@ def ssh_remove(p_host, p_DCP):
     lines = ssh_stderr.read().splitlines()
     if len(lines) > 0:
         for line in lines:
-            print '%s: %s' % (p_host, line)
-        return 1
+            _msg = '%s: %s' % (p_host, line)
+            logger.error(_msg)
+        _msg = "Errors during ssh cmd print"
+        logger.error(_msg)
+        raise TdcpbException(_msg)
 
     lines = ssh_stdout.read().splitlines()
     if len(lines) > 0:
+        _msg = "STDOUT"
+        logger.info(_msg)
         for line in lines:
-            print '%s: %s' % (p_host, line)
+            _msg = '%s: %s' % (p_host, line)
+            logger.info(_msg)
+        _msg = "END STDOUT"
+        logger.info(_msg)
 
     response = raw_input("Suppress this DCP(y/n) ")
     if response == 'y':
         ssh.connect(host_config['hostname'], username=host_config['user'], port= int(host_config['port']))
-        print cmd_delete
+        logger.info("Delete cmd: {}".format(cmd_delete))
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_delete)
         ssh_stdin.close()
         lines = ssh_stdout.read().splitlines()
-        for line in lines:
-            print '%s: %s' % (p_host, line)
-        lines = ssh_stderr.read().splitlines()
-        for line in lines:
-            print '%s: %s' % (p_host, line)
+        if len(lines) > 0:
+            for line in lines:
+                _msg = '%s: %s' % (p_host, line)
+                logger.error(_msg)
+            _msg = "Errors during ssh cmd delete"
+            logger.error(_msg)
+            raise TdcpbException(_msg)
+        lines = ssh_stdout.read().splitlines()
+        if len(lines) > 0:
+            _msg = "STDOUT"
+            logger.info(_msg)
+            for line in lines:
+                _msg = '%s: %s' % (p_host, line)
+                logger.info(_msg)
+            _msg = "END STDOUT"
+            logger.info(_msg)
     else:
-        print "no delete"
-        return 1
-    return 0
+        _msg =  "Nothing to delete"
+        logger.info("msg")
+        return 
+    return
 
 
 def main(argv):
@@ -114,7 +134,7 @@ def main(argv):
 
     parser.add_argument('-f', '--force',
                     action='store_true',
-                   help='remove torrent data on server')
+                   help='remove torrent data on bitorrent client host')
 
     args = parser.parse_args()
     if not os.path.exists(args.torrent_file):
@@ -157,10 +177,13 @@ def main(argv):
     _torrents = _tc.get_torrents()['torrents']
     if not any( _t['hash'] == tinfo['hash'] for _t in _torrents):
         if args.force:
-            DCP = os.path.basename( os.path.splitext(args.torrent_file)[0])
-            res = ssh_remove(args.host, DCP)
-            print res
-            if res == 0:
+            DCP = os.path.basename(os.path.splitext(args.torrent_file)[0])
+            try:
+                ssh_remove(args.host, DCP)
+            except TdcpbException as err:
+                logger.error('Errors detected during delete')
+                return 1
+            else:
                 msg= u'Torrent {} removed and {} freed in {}'.\
                         format(tinfo['name'], sizeof_fmt(tinfo['size']),args.host)
                 logger.info(msg)
