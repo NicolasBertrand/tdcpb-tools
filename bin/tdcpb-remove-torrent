@@ -33,6 +33,7 @@ import argparse
 import os.path
 import pprint
 
+import paramiko
 
 from tdcpblib import logger
 from tdcpblib.torrent_meta import TorrentMeta
@@ -40,6 +41,64 @@ from tdcpblib.common import get_host_torrent_login
 from tdcpblib.common import TdcpbException
 from tdcpblib.common import sizeof_fmt
 from tdcpblib.torrent_client import TransmissionClient
+
+DCPS_SOURCE_PATH={
+        'ness':'/data/tdcpb/transmission/downloads/',
+        'tdcpb31':'/data/tdcpb/transmission/downloads/',
+        'gncr':'/data/tdcpb/DCP/',
+        }
+
+def ssh_remove(p_host, p_DCP):
+    if p_host in DCPS_SOURCE_PATH:
+        cmd_print = 'find {}/{} -print'.format(DCPS_SOURCE_PATH[p_host] , p_DCP)
+        cmd_delete = 'find {}/{} -delete'.format(DCPS_SOURCE_PATH[p_host] , p_DCP)
+    else:
+        print "No DCP source found for {}".format(p_host)
+        return 1
+
+    client = paramiko.SSHClient()
+    client._policy = paramiko.WarningPolicy()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    ssh_config = paramiko.SSHConfig()
+    user_config_file = os.path.expanduser("~/.ssh/config")
+    if os.path.exists(user_config_file):
+        with open(user_config_file) as f:
+            ssh_config.parse(f)
+
+    host_config = ssh_config.lookup(p_host)
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host_config['hostname'], username=host_config['user'], port= int(host_config['port']))
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_print)
+    ssh_stdin.close()
+    lines = ssh_stderr.read().splitlines()
+    if len(lines) > 0:
+        for line in lines:
+            print '%s: %s' % (p_host, line)
+        return 1
+
+    lines = ssh_stdout.read().splitlines()
+    if len(lines) > 0:
+        for line in lines:
+            print '%s: %s' % (p_host, line)
+
+    response = raw_input("Suppress this DCP(y/n) ")
+    if response == 'y':
+        ssh.connect(host_config['hostname'], username=host_config['user'], port= int(host_config['port']))
+        print cmd_delete
+        ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_delete)
+        ssh_stdin.close()
+        lines = ssh_stdout.read().splitlines()
+        for line in lines:
+            print '%s: %s' % (p_host, line)
+        lines = ssh_stderr.read().splitlines()
+        for line in lines:
+            print '%s: %s' % (p_host, line)
+    else:
+        print "no delete"
+        return 1
+    return 0
 
 
 def main(argv):
@@ -92,17 +151,22 @@ def main(argv):
     else :
         print "{} {}".format( tinfo['name'], tinfo['hash'])
 
-    _tc.remove(tinfo['hash'], delete_data=args.force)
+    _tc.remove(tinfo['hash'], delete_data=False)
 
 
     _torrents = _tc.get_torrents()['torrents']
     if not any( _t['hash'] == tinfo['hash'] for _t in _torrents):
         if args.force:
-            msg= u'Torrent {} removed and {} freed in {}'.\
-                    format(tinfo['name'], sizeof_fmt(tinfo['size']),args.host)
+            DCP = os.path.basename( os.path.splitext(args.torrent_file)[0])
+            res = ssh_remove(args.host, DCP)
+            print res
+            if res == 0:
+                msg= u'Torrent {} removed and {} freed in {}'.\
+                        format(tinfo['name'], sizeof_fmt(tinfo['size']),args.host)
+                logger.info(msg)
         else:
             msg= u'Torrent {} removed in {}'.format(tinfo['name'],args.host)
-        logger.info(msg)
+            logger.info(msg)
     return 0
 
 if __name__ == "__main__":
