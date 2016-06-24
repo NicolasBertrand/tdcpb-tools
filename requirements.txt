@@ -1,5 +1,6 @@
 argparse==1.2.1
 bencode==1.0
+paramiko==1.17.0
 six==1.10.0
 transmissionrpc==0.11
 wsgiref==0.1.2
