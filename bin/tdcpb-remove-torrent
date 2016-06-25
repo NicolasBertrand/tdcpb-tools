@@ -41,14 +41,31 @@ from tdcpblib.common import TdcpbException
 from tdcpblib.common import sizeof_fmt
 from tdcpblib.torrent_client import TransmissionClient
 
-DCPS_SOURCE_PATH={
-        'ness':'/data/tdcpb/transmission/downloads/',
-        'tdcpb31':'/data/tdcpb/transmission/downloads/',
-        'gncr':'/data/tdcpb/DCP/',
-        'localhost':'/data/tdcpb/downloads',
-        }
+DCPS_SOURCE_CONFIG_FILE = './config/tdcpb-dcp-path'
+
+
+def open_config_dcp_path(path):
+    _dict = {}
+    try:
+        with open(path, 'r') as f:
+            lines = f.readlines()
+        DCP_SOURCE_PATH={}
+        _tmp = [ _l.split(':') for _l in lines]
+        for _l  in _tmp:
+            _dict[_l[0].strip()] = _l[1].strip()
+        return _dict
+
+    except IOError as err:
+        print err
+        return None
+
 
 def ssh_remove(p_host, p_DCP):
+    DCPS_SOURCE_PATH = open_config_dcp_path(DCPS_SOURCE_CONFIG_FILE)
+    if DCPS_SOURCE_PATH is None:
+        _msg='read of DCP path config goes wrong'
+        raise TdcpbException(_msg)
+
     if p_host in DCPS_SOURCE_PATH:
         cmd_print = 'find {}/{} -print'.format(DCPS_SOURCE_PATH[p_host] , p_DCP)
         cmd_delete = 'find {}/{} -delete'.format(DCPS_SOURCE_PATH[p_host] , p_DCP)
@@ -117,7 +134,7 @@ def ssh_remove(p_host, p_DCP):
     else:
         _msg =  "Nothing to delete"
         logger.info("msg")
-        return 
+        return
     return
 
 
@@ -181,7 +198,7 @@ def main(argv):
             try:
                 ssh_remove(args.host, DCP)
             except TdcpbException as err:
-                logger.error('Errors detected during delete')
+                logger.error('Errors detected during ssh_remove')
                 return 1
             else:
                 msg= u'Torrent {} removed and {} freed in {}'.\
