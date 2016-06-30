@@ -108,7 +108,7 @@ def ssh_remove(p_host, p_DCP):
         _msg = "END STDOUT"
         logger.info(_msg)
 
-    response = raw_input("Suppress this DCP(y/n) ")
+    response = 'y'
     if response == 'y':
         ssh.connect(host_config['hostname'], username=host_config['user'], port= int(host_config['port']))
         logger.info("Delete cmd: {}".format(cmd_delete))
