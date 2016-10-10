@@ -11,10 +11,10 @@ from . import logger
 
 
 class Lftp(object):
-    LFTP_CMDS="set xfer:log true; set net:reconnect-interval-base 20; set net:max-retries 2; mirror --verbose=3 -Rc {dry_run} {local} {remote} ; quit"
+    LFTP_CMDS="set xfer:log true; set net:reconnect-interval-base 20; set net:max-retries 2; mirror --verbose=3 -Rcp {dry_run} {local} {remote} ; quit"
     #LFTP_CMDS="set xfer:log true; mirror --verbose=1 -Rc {local} {remote} {dry_run} ; quit"
     LFTP_SSL_CMDS=\
-    "set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true;  mirror --verbose=3 -Rc {dry_run} {local} {remote} ; quit"
+    "set ftp:ssl-force true; set ssl:verify-certificate no; set xfer:log true;  mirror --verbose=3 -Rcp {dry_run} {local} {remote} ; quit"
 
     def __init__(self, p_dir_path, p_config_data, dry_run = False ) :
         self.config_data = p_config_data
