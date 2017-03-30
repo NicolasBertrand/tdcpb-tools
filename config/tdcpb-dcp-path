@@ -5,3 +5,5 @@ localhost: /data/tdcpb/downloads
 cineco: /data/tdcpb/transmission/downloads/
 lux1402: /data/tdcpb/transmission/downloads/
 utopialab: /data/tdcpb/data20/tmp
+moussaka: /data/DCP
+tdcpbgrenode:/data/tdcpb/transmission/downloads/
