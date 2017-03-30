@@ -28,6 +28,7 @@
 # Remove a torrent from a torrent client, delete of file on host can be forced
 
 import sys
+sys.path.append('.')
 import argparse
 import os.path
 import pprint
