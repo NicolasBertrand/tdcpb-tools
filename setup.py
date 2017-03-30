@@ -9,7 +9,7 @@ setup(
     description  = "colletion of toools for tdcpb: ingets, verify, transmission post exec",
     author       = "Nicolas Bertrand",
     author_email = "nicolas@indecp.org",
-    version      = "0.51",
+    version      = "0.52",
     scripts      = [
         "bin/tdcpbftp",
         "bin/tdcpb-checkdcp-short",

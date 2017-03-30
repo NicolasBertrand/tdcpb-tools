@@ -309,6 +309,9 @@ def main(argv):
         logger.error(msg)
         return
 
+    # wait a bit before verification (wait all transmission .part removed)
+    logger.info('Starting tdcpb-transmission-done')
+    time.sleep(20)
 
     torrent_msg ={}
     torrent_msg["name"]     = os.environ.get('TR_TORRENT_NAME',  "ERROR_NO_NAME")
