@@ -105,6 +105,9 @@ class TransmissionClient(BitTorrentClient):
     def verify(self, torrent_hash):
         self.client.verify_torrent(torrent_hash)
 
+    def free_space(self):
+        session = self.client.get_session()
+        return (1.0*session.download_dir_free_space)/2**30
 
 def main(argv):
     pass
